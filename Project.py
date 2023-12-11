@@ -1,50 +1,64 @@
-import tkinter as tk
-from tkinter import ttk
 import json
+import customtkinter
 
-def load_steam_data(file_path):
+def Json_bestand():
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            data = json.load(file)
-        return data
-    except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found.")
-        return None
-    except json.JSONDecodeError:
-        print(f"Error: Unable to decode JSON in '{file_path}'.")
+        with open('steam.json', 'r') as json_bestand:
+            data = json.load(json_bestand)
+            return data
+    except Exception as e:
+        print(f"Fout bij het verwerken van het json bestand: {e}")
         return None
 
-class SteamApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Steam Dashboard")
+def gesorteerde_namen(data):
+    game_namen = [game.get("name", " ") for game in data]
 
-        self.steam_data = load_steam_data('steam.json')
+    # Sorteer de spelnamen alfabetisch
+    game_namen.sort()
 
-        self.create_widgets()
+    # Geef de eerste 10 gesorteerde spelnamen terug
+    return game_namen[:10]
 
-    def create_widgets(self):
+def GUI_Dashboard():
+    customtkinter.set_appearance_mode("dark")
+    customtkinter.set_default_color_theme("dark-blue")
 
-        self.game_label = tk.Label(self.root, text="First Game: " + self.steam_data[0]["game"])
-        self.game_label.pack(pady=10)
+    Dashboard_Scherm = customtkinter.CTk()
+    Dashboard_Scherm.geometry("500x350")
 
 
-        sort_button = tk.Button(self.root, text="Sort Data", command=self.sort_and_display)
-        sort_button.pack(pady=10)
 
-    def sort_and_display(self):
+    def naam_eerste_spel():
+        data = Json_bestand()
 
-        sorted_data = sorted(self.steam_data, key=lambda x: x["playtime"], reverse=True)
+        if data:
+            # Haal de naam op van het eerste spel
+            naam_eerste_spel = data[0].get("name", " ")
 
-        sorted_str = "\n".join([f"Game: {item['game']}, Playtime: {item['playtime']}, Friends Online: {item['friends_online']}" for item in sorted_data])
+            # Toon de naam in het GUI (veronderstel dat je een label-widget hebt)
+            label = customtkinter.CTkLabel(master=Dashboard_Scherm, text=f"Eerste Spel: {naam_eerste_spel}")
+            label.pack(pady=20, padx=10)
 
-        sort_window = tk.Toplevel(self.root)
-        sort_window.title("Sorted Data")
+    # Roep de weergeef_naam_eerste_spel functie aan om de naam weer te geven op het GUI
+    naam_eerste_spel()
 
-        sorted_label = tk.Label(sort_window, text=sorted_str)
-        sorted_label.pack(padx=10, pady=10)
+    def alfabetische_spellen():
+        data = Json_bestand()
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = SteamApp(root)
-    root.mainloop()
+        if data:
+            # Gebruik de gesorteerde_namen functie om de gesorteerde namen te krijgen
+            gesorteerde_spellen = gesorteerde_namen(data)
+
+            # Toon de namen in het GUI (veronderstel dat je een label-widget hebt)
+            for naam in gesorteerde_spellen:
+                label = customtkinter.CTkLabel(master=Dashboard_Scherm, text=f"Afabetische volgorde Spel: {naam}")
+                label.pack(pady=10, padx=10)
+
+    # Roep de weergeef_alfabetische_spellen functie aan om de namen weer te geven op het GUI
+    alfabetische_spellen()
+
+    # Start de Tkinter-eventloop
+    Dashboard_Scherm.mainloop()
+
+# Roep de GUI_Dashboard functie aan om het GUI te maken en weer te geven
+GUI_Dashboard()

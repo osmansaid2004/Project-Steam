@@ -57,8 +57,6 @@ def GUI_Dashboard():
     # Roep de weergeef_alfabetische_spellen functie aan om de namen weer te geven op het GUI
     alfabetische_spellen()
 
-    # Start de Tkinter-eventloop
     Dashboard_Scherm.mainloop()
 
-# Roep de GUI_Dashboard functie aan om het GUI te maken en weer te geven
 GUI_Dashboard()

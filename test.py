@@ -1,59 +1,82 @@
 import tkinter as tk
 from tkinter import ttk
-import json
+import requests
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-def load_steam_data(file_path):
+def get_games_data():
+    steamid = '76561198328287806'
+    api_key = 'A3901F53D2D1F26049D9FF8C91E9BB78'
+    params = {
+        'key': api_key,
+        'steamid': steamid,
+        'format': 'json',
+        'include_appinfo': 1
+    }
+
+    url = f'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/'
+
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            data = json.load(file)
-        return data
-    except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found.")
-        return None
-    except json.JSONDecodeError:
-        print(f"Error: Unable to decode JSON in '{file_path}'.")
-        return None
+        response = requests.get(url, params=params)
 
-class SteamApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Steam Dashboard")
+        if response.status_code == 200:
+            data = response.json()
 
-        # Load data from steam.json
-        self.steam_data = self.load_steam_data('steam.json')
+            if 'response' in data:
+                return data['response'].get('games', [])
 
-        # Create GUI components
-        self.create_widgets()
+            else:
+                print("Response does not contain 'response' key.")
 
-    def create_widgets(self):
-        # Label to display the name of the first game
-        self.game_label = tk.Label(self.root, text="First Game: " + self.steam_data[0]["name"])
-        self.game_label.pack(pady=10)
+        else:
+            print(f"API request failed with status code: {response.status_code}")
 
-        # Button to sort and display data
-        sort_button = tk.Button(self.root, text="Sort Data", command=self.sort_and_display)
-        sort_button.pack(pady=10)
+    except Exception as e:
+        print(f"Error: {e}")
+    return []
 
-    def load_steam_data(self, file_path):
-        data = load_steam_data(file_path)
-        return data.get("games", []) if data else []
+def calculate_statistics(data):
+    sorted_games = sorted(data, key=lambda game: game.get('playtime_forever', 0), reverse=True)
+    top_3_games = sorted_games[:3]
 
-    def sort_and_display(self):
-        # Sort data based on playtime
-        sorted_data = sorted(self.steam_data, key=lambda x: x.get("playtime", 0), reverse=True)
+    return top_3_games
 
-        # Display sorted data
-        sorted_str = "\n".join([f"Game: {item['name']}, Playtime: {item['playtime']}, Friends Online: {item.get('friends_online', 0)}" for item in sorted_data])
+def display_statistics():
+    games_data = get_games_data()
 
-        # Create a new window to display sorted data
-        sort_window = tk.Toplevel(self.root)
-        sort_window.title("Sorted Data")
+    if not games_data:
+        print("No games data available.")
+        return
 
-        # Label to display sorted data
-        sorted_label = tk.Label(sort_window, text=sorted_str)
-        sorted_label.pack(padx=10, pady=10)
+    top_3_games = calculate_statistics(games_data)
 
-if __name__ == "__main__":
+    # Create a Tkinter window
     root = tk.Tk()
-    app = SteamApp(root)
+    root.title("Steam Games Statistics")
+
+    chart_frame = ttk.Frame(root)
+    chart_frame.pack(side=tk.TOP, padx=10, pady=10)
+
+    # Display top 3 games as a bar chart using Matplotlib
+    fig, ax = plt.subplots(figsize=(6, 4))
+    game_names = [game.get('name', 'N/A') for game in top_3_games]
+    playtimes = [game.get('playtime_forever', 0) / 60 for game in top_3_games]
+
+    ax.bar(game_names, playtimes, color='skyblue')
+    ax.set_ylabel('Playtime (hours)')
+    ax.set_title('Top 3 Played Games')
+
+    # Embed the Matplotlib chart in the Tkinter window
+    canvas = FigureCanvasTkAgg(fig, master=root)
+    canvas_widget = canvas.get_tk_widget()
+    canvas_widget.pack(padx=5, pady=5)
+
+    # Button to close the GUI
+    close_button = ttk.Button(root, text="Close", command=root.destroy)
+    close_button.pack(pady=5)
+
+    # Run the Tkinter main loop
     root.mainloop()
+
+# Call the function to display statistics in a GUI
+display_statistics()

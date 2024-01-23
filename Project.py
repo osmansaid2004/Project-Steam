@@ -1,62 +1,55 @@
-import json
-import customtkinter
+import requests
 
-def Json_bestand():
+def Api_Call_Games(print_all=False):
+    steamid = '76561198328287806'
+    api_key = 'A3901F53D2D1F26049D9FF8C91E9BB78'
+    params = {
+        'key': api_key,
+        'steamid': steamid,
+        'format': 'json',
+        'include_appinfo': 1
+    }
+
+    url = f'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/'
+
     try:
-        with open('steam.json', 'r') as json_bestand:
-            data = json.load(json_bestand)
-            return data
+        response = requests.get(url, params=params)
+
+        if response.status_code == 200:
+            data = response.json()
+
+            if 'response' in data:
+                games_data = data['response'].get('games', [])
+
+                if not games_data:
+                    print("No games data available.")
+                    return
+
+                sorted_games = sorted(games_data, key=lambda game: game.get('playtime_forever', 0), reverse=True)
+
+                if print_all:
+                    print("\nAll Played Games:")
+                else:
+                    print("\nTop 3 Most Played Games:")
+
+                num_games_to_print = len(sorted_games) if print_all else min(3, len(sorted_games))
+
+                for game in sorted_games[:num_games_to_print]:
+                    app_id = game.get('appid', 'N/A')
+                    name = game.get('name', 'N/A')
+                    playtime = game.get('playtime_forever', 'N/A')
+
+                    print(f"App ID: {app_id}, Name: {name}, Playtime: {int(playtime/60)} Hours")
+
+            else:
+                print("Response does not contain 'response' key.")
+
+        else:
+            print(f"API request failed with status code: {response.status_code}")
+
     except Exception as e:
-        print(f"Fout bij het verwerken van het json bestand: {e}")
-        return None
-
-def gesorteerde_namen(data):
-    game_namen = [game.get("name", " ") for game in data]
-
-    # Sorteer de spelnamen alfabetisch
-    game_namen.sort()
-
-    # Geef de eerste 10 gesorteerde spelnamen terug
-    return game_namen[:10]
-
-def GUI_Dashboard():
-    customtkinter.set_appearance_mode("dark")
-    customtkinter.set_default_color_theme("dark-blue")
-
-    Dashboard_Scherm = customtkinter.CTk()
-    Dashboard_Scherm.geometry("500x350")
+        print(f"Error: {e}")
 
 
-
-    def naam_eerste_spel():
-        data = Json_bestand()
-
-        if data:
-            # Haal de naam op van het eerste spel
-            naam_eerste_spel = data[0].get("name", " ")
-
-            # Toon de naam in het GUI (veronderstel dat je een label-widget hebt)
-            label = customtkinter.CTkLabel(master=Dashboard_Scherm, text=f"Eerste Spel: {naam_eerste_spel}")
-            label.pack(pady=20, padx=10)
-
-    # Roep de weergeef_naam_eerste_spel functie aan om de naam weer te geven op het GUI
-    naam_eerste_spel()
-
-    def alfabetische_spellen():
-        data = Json_bestand()
-
-        if data:
-            # Gebruik de gesorteerde_namen functie om de gesorteerde namen te krijgen
-            gesorteerde_spellen = gesorteerde_namen(data)
-
-            # Toon de namen in het GUI (veronderstel dat je een label-widget hebt)
-            for naam in gesorteerde_spellen:
-                label = customtkinter.CTkLabel(master=Dashboard_Scherm, text=f"Afabetische volgorde Spel: {naam}")
-                label.pack(pady=10, padx=10)
-
-    # Roep de weergeef_alfabetische_spellen functie aan om de namen weer te geven op het GUI
-    alfabetische_spellen()
-
-    Dashboard_Scherm.mainloop()
-
-GUI_Dashboard()
+Api_Call_Games()
+Api_Call_Games(print_all=True)

@@ -3,6 +3,8 @@ import requests
 
 API_KEY = 'A3901F53D2D1F26049D9FF8C91E9BB78'
 
+# Steam_id = 76561199577191098 Van Soulaiman
+
 
 def api_call_games(steam_id):
     params = {
@@ -117,22 +119,6 @@ def naam_eerste_spel(steam_id, dashboard_window):
         label_2_time.place(y=700, x=1050)
 
 
-def display_all_games_list(steam_id, dashboard_window):
-    data = api_call_games(steam_id)
-
-    if data:
-        games_list = data['games']
-        listbox = Listbox(master=dashboard_window, selectbackground='#171a21', fg='#c7d5e0', bg='#242b38', font=('NS Sans', 12, 'bold'))
-        listbox.place(x=20, y=150, height=500, width=400)
-
-        for game in games_list:
-            game_name = game.get('name', 'N/A')
-            playtime_hours = game.get('playtime_forever', 0) // 60
-            listbox.insert(END, f"{game_name} - {playtime_hours} hours")
-
-        # Aanpassing: Stel de achtergrondkleur van de Listbox in
-        listbox.config(bg='#171a21')
-
 def gui_dashboard(steam_id):
     global persona_name
     global player_info
@@ -141,9 +127,11 @@ def gui_dashboard(steam_id):
     dashboard_scherm.title(f"Dashboard Steam friends ")
     dashboard_scherm.config(background='#171a21')
 
+
+
+
     display_player_info_label(steam_id, dashboard_scherm)
     naam_eerste_spel(steam_id, dashboard_scherm)
-    display_all_games_list(steam_id, dashboard_scherm)
 
     dashboard_scherm.mainloop()
 

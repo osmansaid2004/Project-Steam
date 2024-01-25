@@ -1,9 +1,9 @@
 from tkinter import *
 import requests
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 API_KEY = 'A3901F53D2D1F26049D9FF8C91E9BB78'
-
-# Steam_id = 76561199577191098 Van Soulaiman
 
 
 def api_call_games(steam_id):
@@ -92,7 +92,7 @@ def display_player_info_label(steam_id, dashboard_window):
         label2 = Label(master=dashboard_window,
                        fg='#c7d5e0',
                        bg='#171a21',
-                       font=('NS Sans', 40, 'bold'),
+                       font=('NS Sans', 30, 'bold'),
                        text=f"Welcome {player_info['persona_name']}'s Friend!")
         label2.place(y=20, x=20)
 
@@ -118,17 +118,44 @@ def naam_eerste_spel(steam_id, dashboard_window):
                              text=f"Played: {most_played_hours} hours")
         label_2_time.place(y=700, x=1050)
 
+        # Aanpassing: Voeg een cirkeldiagram toe
+        top_3_games = data['games'][:3]
+        display_circular_chart(top_3_games, dashboard_window)
+
+
+def display_circular_chart(games, dashboard_window):
+    fig, ax = plt.subplots(figsize=(6, 4))
+    game_names = [game.get('name', 'N/A') for game in games]
+    playtimes = [game.get('playtime_forever', 0) / 60 for game in games]
+
+    label_colors = ['#c7d5e0', '#c7d5e0', '#c7d5e0']
+
+    wedges, texts, autotexts = ax.pie(playtimes, labels=game_names, autopct=lambda p: '{:.1f}%'.format(p), startangle=90, colors=['#1b2838', '#c7d5e0', '#2a475e'])
+
+    for text, autotext, color in zip(texts, autotexts, label_colors):
+        text.set_color(color)
+        text.set_fontsize(8)
+        autotext.set_color('white')
+        autotext.set_fontsize(8)
+
+    ax.axis('equal')
+    fig.patch.set_facecolor('#171a21')
+
+    canvas = FigureCanvasTkAgg(fig, master=dashboard_window)
+    canvas_widget = canvas.get_tk_widget()
+    canvas_widget.place(x=-60, y=400)
+
+    canvas.draw_idle()
+
+
+
+
 
 def gui_dashboard(steam_id):
-    global persona_name
-    global player_info
     dashboard_scherm = Tk()
     dashboard_scherm.geometry("1500x1500")
     dashboard_scherm.title(f"Dashboard Steam friends ")
     dashboard_scherm.config(background='#171a21')
-
-
-
 
     display_player_info_label(steam_id, dashboard_scherm)
     naam_eerste_spel(steam_id, dashboard_scherm)

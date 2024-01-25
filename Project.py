@@ -1,5 +1,7 @@
 from tkinter import *
 import requests
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 API_KEY = 'A3901F53D2D1F26049D9FF8C91E9BB78'
 
@@ -116,6 +118,10 @@ def naam_eerste_spel(steam_id, dashboard_window):
                              text=f"Played: {most_played_hours} hours")
         label_2_time.place(y=700, x=1050)
 
+        # Aanpassing: Voeg een cirkeldiagram toe
+        top_3_games = data['games'][:3]
+        display_circular_chart(top_3_games, dashboard_window)
+
 
 def display_all_games_list(steam_id, dashboard_window):
     data = api_call_games(steam_id)
@@ -132,6 +138,20 @@ def display_all_games_list(steam_id, dashboard_window):
 
         # Aanpassing: Stel de achtergrondkleur van de Listbox in
         listbox.config(bg='#171a21')
+
+
+def display_circular_chart(games, dashboard_window):
+    fig, ax = plt.subplots(figsize=(4, 4))
+    game_names = [game.get('name', 'N/A') for game in games]
+    playtimes = [game.get('playtime_forever', 0) / 60 for game in games]
+
+    ax.pie(playtimes, labels=game_names, autopct='%1.1f%%', startangle=90, colors=plt.cm.Paired.colors)
+    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+    canvas = FigureCanvasTkAgg(fig, master=dashboard_window)
+    canvas_widget = canvas.get_tk_widget()
+    canvas_widget.place(x=500, y=150)
+
 
 def gui_dashboard(steam_id):
     global persona_name

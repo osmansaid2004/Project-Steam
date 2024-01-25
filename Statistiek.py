@@ -4,6 +4,8 @@ import requests
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+# Steam_id = 76561199577191098 Van Soulaiman
+
 def get_games_data():
     steamid = '76561198328287806'
     api_key = 'A3901F53D2D1F26049D9FF8C91E9BB78'
@@ -37,7 +39,7 @@ def get_games_data():
 
 def calculate_statistics(data):
     sorted_games = sorted(data, key=lambda game: game.get('playtime_forever', 0), reverse=True)
-    top_3_games = sorted_games[:3]
+    top_3_games = sorted_games[:5]
 
     return top_3_games
 
@@ -57,13 +59,12 @@ def display_statistics():
     chart_frame = ttk.Frame(root)
     chart_frame.pack(side=tk.TOP, padx=10, pady=10)
 
-    # Display top 3 games as a bar chart using Matplotlib
+    # Display top 3 games as a pie chart using Matplotlib
     fig, ax = plt.subplots(figsize=(6, 4))
     game_names = [game.get('name', 'N/A') for game in top_3_games]
     playtimes = [game.get('playtime_forever', 0) / 60 for game in top_3_games]
 
-    ax.bar(game_names, playtimes, color='skyblue')
-    ax.set_ylabel('Playtime (hours)')
+    ax.pie(playtimes, labels=game_names, autopct='%1.1f%%', startangle=90, colors=['skyblue', 'lightcoral', 'lightgreen'])
     ax.set_title('Top 3 Played Games')
 
     # Embed the Matplotlib chart in the Tkinter window

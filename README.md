@@ -1,6 +1,6 @@
 # Project-Steam
 Groepsleden: Soulaiman, Redouan, Nordin, Osman
-Leerlingnummers: 1859658(Osman), 1853813(Redouan), 1855958(Nordin), (Soulaiman)
+Leerlingnummers: 1859658(Osman), 1853813(Redouan), 1855958(Nordin), 1859100(Soulaiman)
 Doel van Project:
 
 We moeten een grafische weergave maken die inzicht geeft in het gaming gedrag van jouw vrienden op het platform Steam, ondersteund door één of meer hardwarecomponenten maken.

@@ -1,0 +1,353 @@
+from tkinter import *
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import requests
+from PIL import Image, ImageTk
+from io import BytesIO
+from datetime import datetime
+
+API_KEY = 'A3901F53D2D1F26049D9FF8C91E9BB78'  # Replace with your actual API key
+
+# 76561199577191098
+def api_call_games(steam_id):
+    params = {
+        'key': API_KEY,
+        'steamid': steam_id,
+        'format': 'json',
+        'include_appinfo': 1
+    }
+
+    url = 'https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/'
+
+    try:
+        response = requests.get(url, params=params)
+
+        if response.status_code == 200:
+            data = response.json()
+
+            if 'response' in data and 'games' in data['response']:
+                games_list = data['response']['games']
+                sorted_games = sorted(games_list, key=lambda game: game.get('playtime_forever', 0), reverse=True)
+                most_played_game = sorted_games[0]
+
+                return {
+                    'games': sorted_games,
+                    'most_played': most_played_game,
+                }
+
+            else:
+                print("No games found for the provided Steam ID.")
+                return None
+
+        else:
+            print(f"API request failed with status code: {response.status_code}")
+            return None
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+
+def api_call_player_info(steam_id):
+    url = f'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={API_KEY}&steamids={steam_id}'
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        player_info = data['response']['players'][0]
+        steam_id = player_info['steamid']
+        persona_name = player_info['personaname']
+        profile_url = player_info['profileurl']
+        persona_state = player_info['personastate']
+        avatar = player_info['avatar']
+
+        # Convert Unix timestamp to datetime
+        lastlogoff_unix = player_info['lastlogoff']
+        lastlogoff = datetime.utcfromtimestamp(lastlogoff_unix).strftime('%Y-%m-%d %H:%M')
+
+        if persona_state in range(5):
+            persona_states = ["Offline", "Online", "Busy", "Away", "Snooze"]
+            persona_state = persona_states[persona_state]
+
+        # Check if 'gameextrainfo' key exists before accessing it
+        gameextrainfo = player_info.get('gameextrainfo', 'Nothing')
+
+        return {
+            'steam_id': steam_id,
+            'persona_name': persona_name,
+            'profile_url': profile_url,
+            'persona_state': persona_state,
+            'avatar': avatar,
+            'lastlogoff': lastlogoff,
+            'gameextrainfo': gameextrainfo
+        }
+
+    else:
+        print(f"Error: {response.status_code}")
+        return None
+
+def display_player_info_label(steam_id, dashboard_window):
+    player_info = api_call_player_info(steam_id)
+
+    if player_info:
+        labels = [
+            Label(master=dashboard_window, fg='#c7d5e0', bg='#171a21', font=('NS Sans', 18, 'bold'),
+                  text=f"Steam ID: {player_info['steam_id']}\n"),
+            Label(master=dashboard_window, fg='#c7d5e0', bg='#171a21', font=('NS Sans', 18, 'bold'),
+                  text=f"Persona Name: {player_info['persona_name']}"),
+            Label(master=dashboard_window, fg='#c7d5e0', bg='#171a21', font=('NS Sans', 18, 'bold'),
+                  text=f"Status: {player_info['persona_state']}"),
+            Label(master=dashboard_window, fg='#c7d5e0', bg='#171a21', font=('NS Sans', 18, 'bold'),
+                  text=f"last seen: {player_info['lastlogoff']}")
+        ]
+
+        if player_info.get('gameextrainfo'):
+            labels.append(Label(master=dashboard_window, fg='#c7d5e0', bg='#171a21', font=('NS Sans', 18, 'bold'),
+                    text=f"playing: {player_info['gameextrainfo']}"))
+        else:
+            labels.append(Label(master=dashboard_window, fg='#c7d5e0', bg='#171a21', font=('NS Sans', 18, 'bold'),
+                                text="playing: N/A"))
+
+
+        # Place the labels in the window
+        for index, label in enumerate(labels):
+            label.place(y=120 + (index * 40), x=1100)
+
+        welcome_label = Label(master=dashboard_window,
+                              fg='#c7d5e0',
+                              bg='#171a21',
+                              font=('NS Sans', 30, 'bold'),
+                              text=f"Welcome {player_info['persona_name']}'s Friend!")
+        welcome_label.place(y=40, x=140)
+        display_avatar(player_info['avatar'], dashboard_window)
+
+
+def display_avatar(avatar_url, dashboard_window):
+    response = requests.get(avatar_url)
+    if response.status_code == 200:
+        # Open the image using PIL
+        img = Image.open(BytesIO(response.content))
+        img = img.resize((80, 80))
+        img = ImageTk.PhotoImage(img)
+
+        # Create a label to display the image
+        avatar_label = Label(dashboard_window, image=img)
+        avatar_label.image = img  # Keep a reference to the image to prevent garbage collection
+        avatar_label.place(y=20, x=20)
+    else:
+        print("Failed to fetch the avatar image")
+
+
+def naam_eerste_spel(steam_id, dashboard_window):
+    data = api_call_games(steam_id)
+
+    if data:
+        most_played_name = data['most_played'].get('name', 'N/A')
+        most_played_hours = data['most_played'].get('playtime_forever', 0) // 60
+
+        label = Label(master=dashboard_window,
+                      fg='#c7d5e0',
+                      bg='#171a21',
+                      font=('NS Sans', 18, 'bold'),
+                      text=f"Most Played Game: {most_played_name}")
+        label.place(y=420, x=1050)
+
+        label_2_time = Label(master=dashboard_window,
+                             fg='#c7d5e0',
+                             bg='#171a21',
+                             font=('NS Sans', 18, 'bold'),
+                             text=f"Played: {most_played_hours} hours")
+        label_2_time.place(y=700, x=1050)
+
+        # Display most played game image
+        img_url = f"http://media.steampowered.com/steamcommunity/public/images/apps/{data['most_played']['appid']}/{data['most_played']['img_icon_url']}.jpg"
+        display_game_image(img_url, dashboard_window)
+
+        # Aanpassing: Voeg een cirkeldiagram toe
+        top_3_games = data['games'][:3]
+        display_circular_chart(top_3_games, dashboard_window)
+
+
+def display_game_image(img_url, dashboard_window):
+    response = requests.get(img_url)
+    if response.status_code == 200:
+        # Open the image using PIL
+        img = Image.open(BytesIO(response.content))
+        img = img.resize((150, 150))
+        img = ImageTk.PhotoImage(img)
+
+        # Create a label to display the image
+        game_image_label = Label(dashboard_window, image=img)
+        game_image_label.image = img  # Keep a reference to the image to prevent garbage collection
+        game_image_label.place(y=475, x=1050)
+    else:
+        print("Failed to fetch the game image")
+
+
+def display_circular_chart(games, dashboard_window):
+    fig, ax = plt.subplots(figsize=(6, 4))
+    game_names = [game.get('name', 'N/A') for game in games]
+    playtimes = [game.get('playtime_forever', 0) / 60 for game in games]
+    label = Label(dashboard_window, text='Top 3 Most played games:', bg='#171a21', fg='#c7d5e0',
+                  font=('NS Sans', 24, 'bold'))
+    label.place(x=125,y=340)
+
+    label_colors = ['#c7d5e0', '#c7d5e0', '#c7d5e0']
+
+    wedges, texts, autotexts = ax.pie(playtimes, labels=game_names, autopct=lambda p: '{:.1f}%'.format(p), startangle=90, colors=['#1b2838', 'skyblue', '#2a475e'])
+
+    for text, autotext, color in zip(texts, autotexts, label_colors):
+        text.set_color(color)
+        text.set_fontsize(8)
+        autotext.set_color('white')
+        autotext.set_fontsize(8)
+
+    ax.axis('equal')
+    fig.patch.set_facecolor('#171a21')
+
+    canvas = FigureCanvasTkAgg(fig, master=dashboard_window)
+    canvas_widget = canvas.get_tk_widget()
+    canvas_widget.place(x=-60, y=400)
+
+    canvas.draw_idle()
+
+
+# Modify the `gui_dashboard` function to include the button for displaying Pokemon info
+
+
+
+def gui_dashboard(steam_id):
+
+    dashboard_scherm = Tk()
+    dashboard_scherm.geometry("1500x1500")
+    dashboard_scherm.title(f"Dashboard Steam friends ")
+    dashboard_scherm.config(background='#171a21')
+
+    img = Image.open("breed.png")
+    img = img.resize((300, 80))
+    img = ImageTk.PhotoImage(img)
+    logo = Label(dashboard_scherm, image=img)
+    logo.image = img  # Keep a reference to the image to prevent garbage collection
+    logo.place(x=1100, y=20)
+
+    response = requests.get("https://avatars.steamstatic.com/d691cc17a95f18fb80b21945bb940ccce8cb7bdc.jpg")
+    if response.status_code == 200:
+        # Open the image using PIL
+        img = Image.open(BytesIO(response.content))
+        img = img.resize((80, 80))
+        img = ImageTk.PhotoImage(img)
+
+        # Create a label to display the image
+        logo = Label(dashboard_scherm, image=img)
+        logo.image = img  # Keep a reference to the image to prevent garbage collection
+        logo.place(x=20, y=20)
+    else:
+        print("Failed to fetch the image")
+
+
+
+    display_player_info_label(steam_id, dashboard_scherm)
+    naam_eerste_spel(steam_id, dashboard_scherm)
+    display_recently_played_game(steam_id, dashboard_scherm)
+
+
+    dashboard_scherm.mainloop()
+
+import requests
+
+def api_call_recently_played(steam_id):
+    API_KEY = 'A3901F53D2D1F26049D9FF8C91E9BB78'  # Replace with your actual API key
+    url = f'https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key={API_KEY}&steamid={steam_id}'
+
+    try:
+        response = requests.get(url)
+        data = response.json()
+
+        if response.status_code == 200 and 'response' in data and 'games' in data['response']:
+            games = data['response']['games']
+            if games:
+                most_recent_game = games[0]
+                app_id = most_recent_game['appid']
+                name = most_recent_game['name']
+                icon_hash = most_recent_game['img_icon_url']
+                icon_url = f'http://media.steampowered.com/steamcommunity/public/images/apps/{app_id}/{icon_hash}.jpg'
+                return name, icon_url
+            else:
+                return "No recently played games found."
+        else:
+            print("Failed to fetch recently played games.")
+            return None
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+def display_recently_played_game(steam_id, dashboard_window):
+    # Call the recently played games API function
+    game_info = api_call_recently_played(steam_id)
+
+    if game_info:
+        game_name, game_icon_url = game_info
+
+        # Display game name
+        game_label = Label(dashboard_window, text=f"Recently Played: {game_name}", bg='#171a21', fg='#c7d5e0',
+                           font=('NS Sans', 24, 'bold'))
+        game_label.place(x=20, y=150)
+
+        # Display game icon
+        display_game_icon(game_icon_url, game_name, dashboard_window)
+
+
+def display_game_icon(icon_url, game_name, dashboard_window):
+    response = requests.get(icon_url)
+    if response.status_code == 200:
+        img = Image.open(BytesIO(response.content))
+        img = img.resize((40, 40))
+        img = ImageTk.PhotoImage(img)
+
+        # Adjust x-coordinate based on the length of the game name
+        x_offset = 325 + (len(game_name) - 8) * 15
+
+        icon_label = Label(dashboard_window, image=img)
+        icon_label.image = img
+        icon_label.place(x=x_offset, y=150)
+    else:
+        print("Failed to fetch the game icon")
+
+
+
+# Modify the `gui_dashboard` function call accordingly
+def get_steam_id(entry_widget, window):
+    steam_id = entry_widget.get()
+    if steam_id:
+        window.destroy()
+        gui_dashboard(steam_id)
+
+
+def input_steam_id_window():
+    input_window = Tk()
+    input_window.title("Enter Steam ID")
+    input_window.geometry('2500x2500')  # Adjust window size as needed
+    input_window.config(bg='#171a21')
+
+    label = Label(input_window, text="Enter your friend's Steam ID:", bg='#171a21', fg='#c7d5e0', font=('NS Sans', 24, 'bold'))
+    label.pack(pady=80)
+
+    entry = Entry(input_window)
+    entry.pack(pady=80)
+
+    # Load and display the image
+    img = Image.open("breed.png")
+    img = img.resize((300, 100))
+    img = ImageTk.PhotoImage(img)
+    logo = Label(input_window, image=img)
+    logo.image = img  # Keep a reference to the image to prevent garbage collection
+    logo.place(x=10,y=10)
+
+    submit_button = Button(input_window, text="Submit", command=lambda: get_steam_id(entry, input_window))
+    submit_button.pack(pady=10)
+
+    input_window.mainloop()
+
+input_steam_id_window()

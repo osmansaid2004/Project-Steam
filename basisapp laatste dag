@@ -1,11 +1,12 @@
-from tkinter import *
-from PIL import ImageTk, Image
+
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import requests
-from io import BytesIO
 import numpy as np
 from datetime import datetime
+from tkinter import *
+from PIL import ImageTk, Image
+import requests
+from io import BytesIO
 
 API_KEY = 'A3901F53D2D1F26049D9FF8C91E9BB78'  # Replace with your actual API key
 
@@ -320,6 +321,89 @@ def display_game_icon(icon_url, game_name, dashboard_window):
     else:
         print("Failed to fetch the game icon")
 
+from tkinter import Toplevel
+
+# Function to display Pokémon info in a separate window
+def display_pokemon_info_window(pokemon_info):
+    pokemon_window = Toplevel()
+    pokemon_window.title("Pokémon Info")
+    pokemon_window.geometry("400x300")
+
+    # Display Pokémon information in the window
+    name_label = Label(pokemon_window, text=f"Name: {pokemon_info['name']}")
+    name_label.pack()
+
+    # You can add more labels for other Pokémon information such as moves, types, number, artwork, etc.
+
+    # Display Pokémon artwork
+    artwork_img = Image.open(requests.get(pokemon_info['artwork'], stream=True).raw)
+    artwork_photo = ImageTk.PhotoImage(artwork_img)
+    artwork_label = Label(pokemon_window, image=artwork_photo)
+    artwork_label.image = artwork_photo
+    artwork_label.pack()
+
+    # Add a button to close the window
+    close_button = Button(pokemon_window, text="Close", command=pokemon_window.destroy)
+    close_button.pack()
+
+# Modify your GUI function to add a button to display Pokémon info in a separate window
+
+# Function to fetch Pokémon information
+def get_pokemon_info(pokemon_name):
+    url = f"https://pokeapi.co/api/v2/pokemon/{pokemon_name}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        pokemon_info = {
+            'name': data['name'].capitalize(),
+            'artwork': data['sprites']['front_default'],
+            'moves': [move['move']['name'].capitalize() for move in data['moves'][:4]],
+            'types': [type['type']['name'].capitalize() for type in data['types']],
+            'number': data['id'],
+            'description': "Description not available in this API"  # Description may need to be fetched from another source
+        }
+        return pokemon_info
+    else:
+        print(f"Failed to fetch Pokémon info for {pokemon_name}")
+        return None
+
+
+# Function to fetch Steam playtime in last 2 weeks
+def get_recent_playtime(steam_id):
+    API_KEY = 'A3901F53D2D1F26049D9FF8C91E9BB78'
+    url = f'https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key={API_KEY}&steamid={steam_id}'
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            if 'response' in data and 'games' in data['response']:
+                playtime_2weeks = sum(game['playtime_2weeks']//60 for game in data['response']['games'])
+                return playtime_2weeks
+            else:
+                print("No recent playtime data found.")
+        else:
+            print("Failed to fetch recent playtime data.")
+    except Exception as e:
+        print(f"Error: {e}")
+    return None
+
+# Function to display Pokémon info when button is clicked
+def display_pokemon_info(steam_id, dashboard_window):
+    playtime_2weeks = get_recent_playtime(steam_id)
+    if playtime_2weeks is not None:
+        pokemon_name = int(playtime_2weeks)
+        pokemon_info = get_pokemon_info(pokemon_name)
+        if pokemon_info:
+            # Display Pokémon info on dashboard
+            print("Displaying Pokémon Info:", pokemon_info)
+            # You can update your GUI to display the Pokémon information as needed
+        else:
+            print(f"Failed to fetch Pokémon info for {pokemon_name}")
+    else:
+        print("Failed to fetch recent playtime data. Cannot display Pokémon info.")
+
+# Modify your GUI function to add a button to display Pokémon info
+
 
 def gui_dashboard(steam_id):
     dashboard_scherm = Tk()
@@ -350,6 +434,11 @@ def gui_dashboard(steam_id):
     display_player_info_label(steam_id, dashboard_scherm)
     naam_eerste_spel(steam_id, dashboard_scherm)
     display_recently_played_game(steam_id, dashboard_scherm)
+
+    pokemon_button = Button(dashboard_scherm, text="Show Pokémon Info",
+                            command=lambda: display_pokemon_info(steam_id, dashboard_scherm))
+    pokemon_button.place(x=20, y=300)
+
 
     dashboard_scherm.mainloop()
 
